@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chain Counter – Daily Entry</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:    #c9a84c;
+      --gold-lt: #e8c96e;
+      --dark:    #111010;
+      --surface: #1a1816;
+      --card:    #221f1b;
+      --border:  #2e2a24;
+      --text:    #ede8df;
+      --muted:   #8a8070;
+      --red:     #e05252;
+      --green:   #52c97a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 20%, rgba(201,168,76,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 85% 80%, rgba(201,168,76,.06) 0%, transparent 60%),
+        var(--dark);
+    }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 2.5rem; }
+    .header-badge {
+      display: inline-block;
+      font-size: .7rem; font-weight: 600; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--gold);
+      border: 1px solid rgba(201,168,76,.35); border-radius: 2px;
+      padding: .25rem .8rem; margin-bottom: 1rem;
+    }
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      color: var(--text); line-height: 1.15;
+    }
+    .header h1 span { color: var(--gold); }
+    .header p { margin-top: .5rem; color: var(--muted); font-size: .9rem; font-weight: 300; }
+
+
+
+    /* ── Form wrapper ── */
+    form { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.8rem; }
+
+    /* ── Section card ── */
+    .section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .section-header {
+      display: flex; align-items: center; gap: .75rem;
+      padding: 1rem 1.4rem; border-bottom: 1px solid var(--border);
+      background: rgba(201,168,76,.05);
+    }
+    .section-icon {
+      width: 32px; height: 32px; border-radius: 6px;
+      background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .section-header h2 {
+      font-family: 'Playfair Display', serif; font-size: 1rem;
+      font-weight: 600; color: var(--gold-lt);
+    }
+    .section-header span.sub { font-size: .75rem; color: var(--muted); margin-left: auto; font-weight: 300; }
+
+    .section-body {
+      padding: 1.4rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.1rem 1.4rem;
+    }
+
+    /* ── Generic field ── */
+    .field { display: flex; flex-direction: column; gap: .4rem; }
+    .field.wide { grid-column: 1 / -1; }
+
+    label {
+      font-size: .75rem; font-weight: 500; letter-spacing: .04em;
+      color: var(--muted); text-transform: uppercase;
+    }
+    label .req { color: var(--gold); margin-left: 2px; }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="number"],
+    select {
+      background: rgba(0,0,0,.3); border: 1px solid var(--border);
+      border-radius: 7px; padding: .62rem .85rem;
+      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .88rem;
+      outline: none; transition: border-color .22s, box-shadow .22s;
+      width: 100%; -webkit-appearance: none;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(.6) sepia(1) hue-rotate(10deg) saturate(3); cursor: pointer;
+    }
+    input:focus, select:focus {
+      border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.12);
+    }
+    input.invalid, select.invalid {
+      border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(224,82,82,.12) !important;
+    }
+    input.valid, select.valid { border-color: rgba(82,201,122,.5); }
+    select option { background: #221f1b; color: var(--text); }
+
+    .field-error { font-size: .72rem; color: var(--red); min-height: 1rem; display: none; }
+    .field-error.show { display: block; }
+
+    /* ── Y/N toggle (kept for ops checklist) ── */
+    .yn-group { display: flex; gap: .5rem; }
+    .yn-group input[type="radio"] { display: none; }
+    .yn-group label.yn {
+      flex: 1; text-align: center; padding: .55rem;
+      border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+      font-size: .82rem; font-weight: 600; letter-spacing: .06em;
+      text-transform: none; transition: all .18s;
+      background: rgba(0,0,0,.25); color: var(--muted);
+    }
+    .yn-group input[type="radio"]:checked + label.yn.yes {
+      background: rgba(82,201,122,.15); border-color: var(--green); color: var(--green);
+    }
+    .yn-group input[type="radio"]:checked + label.yn.no {
+      background: rgba(224,82,82,.12); border-color: var(--red); color: var(--red);
+    }
+    .yn-group label.yn:hover { border-color: var(--gold); color: var(--gold-lt); }
+
+    /* ──────────────────────────────────────────
+       COUNT-GROUP  (Yes count | No count | Remarks)
+    ────────────────────────────────────────── */
+    .count-group-row {
+      grid-column: 1 / -1;
+      background: rgba(0,0,0,.18);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 1rem 1.1rem 1rem;
+    }
+    .count-group-label {
+      font-size: .7rem; font-weight: 600; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--gold-lt);
+      margin-bottom: .75rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .count-group-label::after {
+      content: ''; flex: 1; height: 1px; background: rgba(201,168,76,.2);
+    }
+    .count-group-cols {
+      display: grid;
+      grid-template-columns: 140px 140px 1fr;
+      gap: .7rem 1rem;
+      align-items: start;
+    }
+    @media (max-width: 560px) {
+      .count-group-cols { grid-template-columns: 1fr 1fr; }
+      .count-group-cols .cg-remarks { grid-column: 1 / -1; }
+    }
+    .cg-sub { display: flex; flex-direction: column; gap: .3rem; }
+    .cg-sub label {
+      font-size: .68rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .cg-sub label.yes-lbl { color: var(--green); }
+    .cg-sub label.no-lbl  { color: var(--red); }
+    .cg-sub label.rem-lbl { color: var(--muted); }
+
+    /* green tint for Yes inputs */
+    .cg-sub.yes-col input {
+      border-color: rgba(82,201,122,.25);
+    }
+    .cg-sub.yes-col input:focus {
+      border-color: var(--green); box-shadow: 0 0 0 3px rgba(82,201,122,.1);
+    }
+    /* red tint for No inputs */
+    .cg-sub.no-col input {
+      border-color: rgba(224,82,82,.25);
+    }
+    .cg-sub.no-col input:focus {
+      border-color: var(--red); box-shadow: 0 0 0 3px rgba(224,82,82,.1);
+    }
+
+    /* ── Submit area ── */
+    .submit-area { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+    .btn-submit {
+      width: 100%; max-width: 340px; padding: .9rem 2rem;
+      background: linear-gradient(135deg, var(--gold) 0%, #a8832a 100%);
+      border: none; border-radius: 8px; color: #1a1612;
+      font-family: 'DM Sans', sans-serif; font-size: .95rem;
+      font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      cursor: pointer; transition: opacity .2s, transform .15s; overflow: hidden;
+    }
+    .btn-submit:hover  { opacity: .9; transform: translateY(-1px); }
+    .btn-submit:active { transform: translateY(0); opacity: .8; }
+    .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 2rem; left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: .8rem 1.4rem;
+      font-size: .88rem; color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s, transform .3s;
+      z-index: 999; display: flex; align-items: center; gap: .6rem; max-width: 90vw;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { border-color: rgba(82,201,122,.4); }
+    #toast.error   { border-color: rgba(224,82,82,.4); }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(26,22,18,.4); border-top-color: #1a1612;
+      border-radius: 50%; animation: spin .7s linear infinite; display: none; margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-submit.loading .btn-label { display: none; }
+    .btn-submit.loading .spinner   { display: block; }
+
+    @media (max-width: 480px) {
+      .section-body { grid-template-columns: 1fr; }
+      .header h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-badge">Daily Operations</div>
+  <h1>Chain Counter <span>Entry</span></h1>
+  <p>Fill out every field carefully · Data saved to Google Sheets automatically</p>
+</header>
+
+
+
+<form id="mainForm" novalidate>
+
+  <!-- ══════════════ SECTION 1 ══════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">👤</div>
+      <h2>Employee Information</h2>
+      <span class="sub">3 fields</span>
+    </div>
+    <div class="section-body">
+
+      <div class="field">
+        <label>Employee Name <span class="req">*</span></label>
+        <input type="text" id="employeeName" placeholder="Full name" autocomplete="name"/>
+        <span class="field-error" id="err-employeeName">Name is required.</span>
+      </div>
+
+      <div class="field">
+        <label>Date <span class="req">*</span></label>
+        <input type="date" id="date"/>
+        <span class="field-error" id="err-date">Date cannot be in the future.</span>
+      </div>
+
+      <div class="field">
+        <label>Department <span class="req">*</span></label>
+        <input type="text" id="department" placeholder="e.g. Jewellery – Chain"/>
+        <span class="field-error" id="err-department">Department is required.</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 2 ══════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📱</div>
+      <h2>Customer Engagement</h2>
+      <span class="sub">10 fields</span>
+    </div>
+    <div class="section-body">
+
+      <!-- Welcoming Customer & Customer Number Saved -->
+      <div class="field">
+        <label>Welcoming Customer <span class="req">*</span></label>
+        <input type="number" id="welcomingCustomer" min="0" placeholder="Count"/>
+        <span class="field-error" id="err-welcomingCustomer">Enter a valid count (≥ 0).</span>
+      </div>
+
+      <div class="field">
+        <label>Customer Number Saved <span class="req">*</span></label>
+        <input type="number" id="customerNumberSaved" min="0" placeholder="Count"/>
+        <span class="field-error" id="err-customerNumberSaved">Enter a valid count (≥ 0).</span>
+      </div>
+
+      <!-- ── YouTube Subscription ── -->
+      <div class="count-group-row">
+        <div class="count-group-label">YouTube Subscription</div>
+        <div class="count-group-cols">
+          <div class="cg-sub yes-col">
+            <label class="yes-lbl">Yes Count <span class="req">*</span></label>
+            <input type="number" id="ytYes" min="0" placeholder="0"/>
+            <span class="field-error" id="err-ytYes">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub no-col">
+            <label class="no-lbl">No Count <span class="req">*</span></label>
+            <input type="number" id="ytNo" min="0" placeholder="0"/>
+            <span class="field-error" id="err-ytNo">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub cg-remarks">
+            <label class="rem-lbl">Remarks (Reason why No?)</label>
+            <input type="text" id="ytRemarks" placeholder="Reason why customer said No"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Instagram Subscription ── -->
+      <div class="count-group-row">
+        <div class="count-group-label">Instagram Subscription</div>
+        <div class="count-group-cols">
+          <div class="cg-sub yes-col">
+            <label class="yes-lbl">Yes Count <span class="req">*</span></label>
+            <input type="number" id="igYes" min="0" placeholder="0"/>
+            <span class="field-error" id="err-igYes">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub no-col">
+            <label class="no-lbl">No Count <span class="req">*</span></label>
+            <input type="number" id="igNo" min="0" placeholder="0"/>
+            <span class="field-error" id="err-igNo">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub cg-remarks">
+            <label class="rem-lbl">Remarks (Reason why No?)</label>
+            <input type="text" id="igRemarks" placeholder="Reason why customer said No"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WhatsApp Channel ── -->
+      <div class="count-group-row">
+        <div class="count-group-label">WhatsApp Channel</div>
+        <div class="count-group-cols">
+          <div class="cg-sub yes-col">
+            <label class="yes-lbl">Yes Count <span class="req">*</span></label>
+            <input type="number" id="waYes" min="0" placeholder="0"/>
+            <span class="field-error" id="err-waYes">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub no-col">
+            <label class="no-lbl">No Count <span class="req">*</span></label>
+            <input type="number" id="waNo" min="0" placeholder="0"/>
+            <span class="field-error" id="err-waNo">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub cg-remarks">
+            <label class="rem-lbl">Remarks (Reason why No?)</label>
+            <input type="text" id="waRemarks" placeholder="Reason why customer said No"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Google Review ── -->
+      <div class="count-group-row">
+        <div class="count-group-label">Google Review</div>
+        <div class="count-group-cols">
+          <div class="cg-sub yes-col">
+            <label class="yes-lbl">Yes Count <span class="req">*</span></label>
+            <input type="number" id="grYes" min="0" placeholder="0"/>
+            <span class="field-error" id="err-grYes">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub no-col">
+            <label class="no-lbl">No Count <span class="req">*</span></label>
+            <input type="number" id="grNo" min="0" placeholder="0"/>
+            <span class="field-error" id="err-grNo">Enter a valid count (≥ 0).</span>
+          </div>
+          <div class="cg-sub cg-remarks">
+            <label class="rem-lbl">Remarks (Reason why No?)</label>
+            <input type="text" id="grRemarks" placeholder="Reason why customer said No"/>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 3 ══════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon">📋</div>
+      <h2>Operations Checklist</h2>
+      <span class="sub">11 fields</span>
+    </div>
+    <div class="section-body">
+
+      <div class="field">
+        <label>Clean Tray <span class="req">*</span></label>
+        <div class="yn-group">
+          <input type="radio" id="ct-y" name="cleanTray" value="Y"/>
+          <label class="yn yes" for="ct-y">Y – Yes</label>
+          <input type="radio" id="ct-n" name="cleanTray" value="N"/>
+          <label class="yn no"  for="ct-n">N – No</label>
+        </div>
+        <span class="field-error" id="err-cleanTray">Select Y or N.</span>
+      </div>
+
+      <div class="field">
+        <label>HUID Maintenance <span class="req">*</span></label>
+        <input type="text" id="huidMaintenance" placeholder="Remarks / status"/>
+        <span class="field-error" id="err-huidMaintenance">This field is required.</span>
+      </div>
+
+      <div class="field">
+        <label>Total HUID PCS <span class="req">*</span></label>
+        <input type="number" id="totalHUIDPCS" min="0" placeholder="Count"/>
+        <span class="field-error" id="err-totalHUIDPCS">Enter a valid count (≥ 0).</span>
+      </div>
+
+      <div class="field">
+        <label>Purchase HML <span class="req">*</span></label>
+        <div class="yn-group">
+          <input type="radio" id="ph-y" name="purchaseHML" value="Y"/>
+          <label class="yn yes" for="ph-y">Y – Yes</label>
+          <input type="radio" id="ph-n" name="purchaseHML" value="N"/>
+          <label class="yn no"  for="ph-n">N – No</label>
+        </div>
+        <span class="field-error" id="err-purchaseHML">Select Y or N.</span>
+      </div>
+
+      <div class="field">
+        <label>Water Bottle 3 <span class="req">*</span></label>
+        <input type="number" id="waterBottle3" min="0" placeholder="Count"/>
+        <span class="field-error" id="err-waterBottle3">Enter a valid count (≥ 0).</span>
+      </div>
+
+      <div class="field">
+        <label>SS Important <span class="req">*</span></label>
+        <div class="yn-group">
+          <input type="radio" id="ss-y" name="ssImportant" value="Y"/>
+          <label class="yn yes" for="ss-y">Y – Yes</label>
+          <input type="radio" id="ss-n" name="ssImportant" value="N"/>
+          <label class="yn no"  for="ss-n">N – No</label>
+        </div>
+        <span class="field-error" id="err-ssImportant">Select Y or N.</span>
+      </div>
+
+      <div class="field">
+        <label>SCAN 15 Days Only <span class="req">*</span></label>
+        <input type="text" id="scan15Days" placeholder="Status / remarks"/>
+        <span class="field-error" id="err-scan15Days">This field is required.</span>
+      </div>
+
+      <div class="field">
+        <label>Chit Report <span class="req">*</span></label>
+        <input type="text" id="chitReport" placeholder="Status / remarks"/>
+        <span class="field-error" id="err-chitReport">This field is required.</span>
+      </div>
+
+      <div class="field">
+        <label>Wanted List <span class="req">*</span></label>
+        <div class="yn-group">
+          <input type="radio" id="wl-y" name="wantedList" value="Y"/>
+          <label class="yn yes" for="wl-y">Y – Yes</label>
+          <input type="radio" id="wl-n" name="wantedList" value="N"/>
+          <label class="yn no"  for="wl-n">N – No</label>
+        </div>
+        <span class="field-error" id="err-wantedList">Select Y or N.</span>
+      </div>
+
+      <div class="field">
+        <label>Customer Data – Nivetha <span class="req">*</span></label>
+        <input type="number" id="customerDataNivetha" min="0" placeholder="Count"/>
+        <span class="field-error" id="err-customerDataNivetha">Enter a valid count (≥ 0).</span>
+      </div>
+
+      <div class="field">
+        <label>Customer Data – Suganya <span class="req">*</span></label>
+        <input type="number" id="customerDataSuganya" min="0" placeholder="Count"/>
+        <span class="field-error" id="err-customerDataSuganya">Enter a valid count (≥ 0).</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="submit-area">
+    <button type="submit" class="btn-submit" id="submitBtn">
+      <span class="btn-label">Submit Entry</span>
+      <div class="spinner"></div>
+    </button>
+  </div>
+
+</form>
+
+<div id="toast">
+  <span class="icon"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<!--
+═══════════════════════════════════════════════════════
+  GOOGLE APPS SCRIPT  — paste this in Extensions → Apps Script
+═══════════════════════════════════════════════════════
+
+const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
+
+const HEADERS = [
+  'Timestamp','Employee Name','Date','Department',
+  'Welcoming Customer','Customer Number Saved',
+  'YouTube Yes','YouTube No','YouTube Remarks',
+  'Instagram Yes','Instagram No','Instagram Remarks',
+  'WhatsApp Yes','WhatsApp No','WhatsApp Remarks',
+  'Google Review Yes','Google Review No','Google Review Remarks',
+  'Clean Tray','HUID Maintenance','Total HUID PCS',
+  'Purchase HML','Water Bottle 3','SS Important',
+  'SCAN 15 Days Only','Chit Report','Wanted List',
+  'Customer Data Nivetha','Customer Data Suganya'
+];
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const ss   = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const now  = new Date();
+    const sheetName = Utilities.formatDate(now, Session.getScriptTimeZone(), 'MMM-yyyy');
+
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.appendRow(HEADERS);
+      const hdr = sheet.getRange(1, 1, 1, HEADERS.length);
+      hdr.setBackground('#1a1a1a').setFontColor('#f5c842').setFontWeight('bold');
+      sheet.setFrozenRows(1);
+      ensureDashboard(ss);
+    }
+
+    const row = [
+      Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
+      data.employeeName, data.date, data.department,
+      data.welcomingCustomer, data.customerNumberSaved,
+      data.ytYes, data.ytNo, data.ytRemarks,
+      data.igYes, data.igNo, data.igRemarks,
+      data.waYes, data.waNo, data.waRemarks,
+      data.grYes, data.grNo, data.grRemarks,
+      data.cleanTray, data.huidMaintenance, data.totalHUIDPCS,
+      data.purchaseHML, data.waterBottle3, data.ssImportant,
+      data.scan15Days, data.chitReport, data.wantedList,
+      data.customerDataNivetha, data.customerDataSuganya
+    ];
+    sheet.appendRow(row);
+    updateDashboard(ss);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput('Chain Counter API OK');
+}
+
+function ensureDashboard(ss) {
+  if (ss.getSheetByName('Dashboard')) return;
+  const dash = ss.insertSheet('Dashboard', 0);
+  dash.getRange('A1').setValue('📊 Chain Counter — Monthly Dashboard')
+      .setFontSize(16).setFontWeight('bold').setFontColor('#f5c842');
+  const cols = [
+    'Month','Entries',
+    'YouTube Yes (Total)','YouTube No (Total)',
+    'Instagram Yes (Total)','Instagram No (Total)',
+    'WhatsApp Yes (Total)','WhatsApp No (Total)',
+    'Google Review Yes (Total)','Google Review No (Total)',
+    'Avg Welcoming','Avg Cust Saved'
+  ];
+  dash.getRange(3, 1, 1, cols.length).setValues([cols])
+      .setBackground('#1a1a1a').setFontColor('#f5c842').setFontWeight('bold');
+  dash.setFrozenRows(3);
+}
+
+function updateDashboard(ss) {
+  const dash = ss.getSheetByName('Dashboard');
+  if (!dash) return;
+  const sheets = ss.getSheets().filter(s => /^[A-Za-z]+-\d{4}$/.test(s.getName()));
+  let row = 4;
+  sheets.forEach(s => {
+    const data = s.getDataRange().getValues();
+    if (data.length < 2) return;
+    const rows = data.slice(1);
+    const n = rows.length;
+    const sum  = col => rows.reduce((a,r)=>a+(+r[col]||0), 0);
+    const avg  = col => (sum(col)/n).toFixed(1);
+    dash.getRange(row, 1, 1, 12).setValues([[
+      s.getName(), n,
+      sum(6), sum(7),   // YT Yes / No  (0-indexed col 6,7)
+      sum(9), sum(10),  // IG
+      sum(12), sum(13), // WA
+      sum(15), sum(16), // GR
+      avg(4), avg(5)    // Welcoming, Saved
+    ]]);
+    row++;
+  });
+}
+
+═══════════════════════════════════════════════════════
+-->
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONFIGURATION  — edit this value before use
+// ═══════════════════════════════════════════════
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_E9kWkfGxA-vzA-k48aqoaSz7oZcsW5ybgaseP6kNZeRtfr1alTn0YJVDCR6CB0VaGA/exec';
+// ═══════════════════════════════════════════════
+
+// ── Set today as default + restrict future ──
+(function(){
+  const today = new Date().toISOString().split('T')[0];
+  const el = document.getElementById('date');
+  el.value = today;
+  el.max   = today;
+})();
+
+// ── Validation helpers ──
+function setValid(id, ok, msg='') {
+  const el  = document.getElementById(id);
+  const err = document.getElementById('err-' + id);
+  if (!el) return ok;
+  el.classList.toggle('invalid', !ok);
+  el.classList.toggle('valid',   ok);
+  if (err) { err.classList.toggle('show', !ok); if (msg) err.textContent = msg; }
+  return ok;
+}
+
+function getRadio(name) {
+  const c = document.querySelector(`input[name="${name}"]:checked`);
+  return c ? c.value : '';
+}
+
+function validateAll() {
+  let valid = true;
+
+  // ── Sec 1 ──
+  if (!setValid('employeeName', document.getElementById('employeeName').value.trim().length > 0)) valid = false;
+  const dv = document.getElementById('date').value;
+  const today = new Date().toISOString().split('T')[0];
+  if (!setValid('date', !!(dv && dv <= today), 'Date is required and cannot be in the future.')) valid = false;
+  if (!setValid('department', document.getElementById('department').value.trim().length > 0)) valid = false;
+
+  // ── Number fields ──
+  const numIds = [
+    'welcomingCustomer','customerNumberSaved',
+    'ytYes','ytNo','igYes','igNo','waYes','waNo','grYes','grNo',
+    'totalHUIDPCS','waterBottle3','customerDataNivetha','customerDataSuganya'
+  ];
+  numIds.forEach(id => {
+    const v = document.getElementById(id).value;
+    if (!setValid(id, v !== '' && +v >= 0, 'Enter a valid count (≥ 0).')) valid = false;
+  });
+
+  // ── Y/N radio fields ──
+  ['cleanTray','purchaseHML','ssImportant','wantedList'].forEach(f => {
+    const val = getRadio(f);
+    const ok  = val === 'Y' || val === 'N';
+    const errEl = document.getElementById('err-' + f);
+    if (errEl) errEl.classList.toggle('show', !ok);
+    if (!ok) valid = false;
+  });
+
+  // ── Required text fields ──
+  ['huidMaintenance','scan15Days','chitReport'].forEach(id => {
+    if (!setValid(id, document.getElementById(id).value.trim().length > 0, 'This field is required.')) valid = false;
+  });
+
+  return valid;
+}
+
+// ── Live validation ──
+document.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('blur', validateAll);
+});
+
+// ── Toast ──
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.className = 'show ' + type;
+  t.querySelector('.icon').textContent = type === 'success' ? '✅' : '❌';
+  document.getElementById('toastMsg').textContent = msg;
+  setTimeout(() => { t.className = ''; }, 4500);
+}
+
+// ── Submit ──
+document.getElementById('mainForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  if (!validateAll()) { showToast('Please fix the highlighted errors.', 'error'); return; }
+
+  const scriptUrl = SCRIPT_URL;
+  if (!scriptUrl || scriptUrl.includes('YOUR_SCRIPT_ID')) {
+    showToast('Script URL not configured. Edit SCRIPT_URL in the file.', 'error'); return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.classList.add('loading');
+
+  const payload = {
+    employeeName:        document.getElementById('employeeName').value.trim(),
+    date:                document.getElementById('date').value,
+    department:          document.getElementById('department').value.trim(),
+    welcomingCustomer:   document.getElementById('welcomingCustomer').value,
+    customerNumberSaved: document.getElementById('customerNumberSaved').value,
+    // YouTube
+    ytYes:     document.getElementById('ytYes').value,
+    ytNo:      document.getElementById('ytNo').value,
+    ytRemarks: document.getElementById('ytRemarks').value.trim(),
+    // Instagram
+    igYes:     document.getElementById('igYes').value,
+    igNo:      document.getElementById('igNo').value,
+    igRemarks: document.getElementById('igRemarks').value.trim(),
+    // WhatsApp
+    waYes:     document.getElementById('waYes').value,
+    waNo:      document.getElementById('waNo').value,
+    waRemarks: document.getElementById('waRemarks').value.trim(),
+    // Google Review
+    grYes:     document.getElementById('grYes').value,
+    grNo:      document.getElementById('grNo').value,
+    grRemarks: document.getElementById('grRemarks').value.trim(),
+    // Ops
+    cleanTray:           getRadio('cleanTray'),
+    huidMaintenance:     document.getElementById('huidMaintenance').value.trim(),
+    totalHUIDPCS:        document.getElementById('totalHUIDPCS').value,
+    purchaseHML:         getRadio('purchaseHML'),
+    waterBottle3:        document.getElementById('waterBottle3').value,
+    ssImportant:         getRadio('ssImportant'),
+    scan15Days:          document.getElementById('scan15Days').value.trim(),
+    chitReport:          document.getElementById('chitReport').value.trim(),
+    wantedList:          getRadio('wantedList'),
+    customerDataNivetha: document.getElementById('customerDataNivetha').value,
+    customerDataSuganya: document.getElementById('customerDataSuganya').value,
+  };
+
+  try {
+    const res  = await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      showToast('Entry saved successfully! 🎉', 'success');
+      document.getElementById('mainForm').reset();
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('date').value = today;
+      document.getElementById('date').max   = today;
+      document.querySelectorAll('.invalid,.valid').forEach(el => el.classList.remove('invalid','valid'));
+      document.querySelectorAll('.field-error.show').forEach(el => el.classList.remove('show'));
+    } else {
+      showToast('Server error: ' + (json.message || 'Unknown'), 'error');
+    }
+  } catch(err) {
+    showToast('Network error – check your Script URL or internet.', 'error');
+    console.error(err);
+  } finally {
+    btn.disabled = false; btn.classList.remove('loading');
+  }
+});
+</script>
+</body>
+</html>
